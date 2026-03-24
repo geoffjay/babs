@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+import requests
 from dotenv import load_dotenv
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import OrderArgs, OrderType
@@ -155,3 +156,39 @@ class PolymarketClient:
         except Exception as e:
             logger.error("Failed to fetch market info: %s", e)
             return None
+
+    def get_prices_history(
+        self,
+        token_id: str,
+        interval: str = "5m",
+        fidelity: int = 60,
+    ) -> List[Dict[str, Any]]:
+        """Fetch historical price data from the CLOB REST API.
+
+        Args:
+            token_id: The condition token ID.
+            interval: Candle interval (e.g. "1m", "5m", "1h", "1d").
+            fidelity: Number of data points to return.
+
+        Returns:
+            List of dicts with ``t`` (unix timestamp) and ``p`` (price) keys,
+            ordered oldest-first.
+        """
+        url = f"{self.host}/prices-history"
+        params = {
+            "market": token_id,
+            "interval": interval,
+            "fidelity": fidelity,
+        }
+        try:
+            resp = requests.get(url, params=params, timeout=10)
+            resp.raise_for_status()
+            history = resp.json()
+            if isinstance(history, dict):
+                history = history.get("history", [])
+            if not isinstance(history, list):
+                return []
+            return history
+        except Exception as e:
+            logger.error("Failed to fetch prices history: %s", e)
+            return []

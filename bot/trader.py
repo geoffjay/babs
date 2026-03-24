@@ -43,15 +43,41 @@ class Trader:
         self._running = False
 
     def _fetch_latest_data(self) -> Optional[pd.DataFrame]:
-        """Fetch the latest market data for the token.
-
-        In a real implementation this would pull live order book / trade data
-        from Polymarket and convert it to OHLCV-like candles. For now, this
-        returns None as a placeholder that callers should override or extend.
-        """
-        # TODO: Implement live data feed from Polymarket or an aggregation service.
+        """Fetch the latest OHLCV data for the token from Polymarket."""
         logger.debug("Fetching latest data for token %s", self.token_id[:16])
-        return None
+
+        fidelity = self.strategy.required_history() + 10
+        history = self.client.get_prices_history(
+            token_id=self.token_id,
+            interval=self.settings.timeframe,
+            fidelity=fidelity,
+        )
+        if not history:
+            return None
+
+        rows = []
+        for point in history:
+            ts = point.get("t")
+            price = point.get("p")
+            if ts is None or price is None:
+                continue
+            price = float(price)
+            rows.append(
+                {
+                    "timestamp": pd.to_datetime(ts, unit="s", utc=True),
+                    "open": price,
+                    "high": price,
+                    "low": price,
+                    "close": price,
+                    "volume": 0.0,
+                }
+            )
+
+        if not rows:
+            return None
+
+        df = pd.DataFrame(rows).set_index("timestamp").sort_index()
+        return df
 
     def _current_price(self, data: pd.DataFrame) -> float:
         """Extract the latest price from data."""
