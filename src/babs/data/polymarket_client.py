@@ -157,6 +157,40 @@ class PolymarketClient:
             logger.error("Failed to fetch market info: %s", e)
             return None
 
+    def get_order_book(self, token_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch order book and return normalized summary.
+
+        Returns:
+            Dict with best_bid, best_ask, bid_depth, ask_depth, last_trade_price,
+            or None on failure.
+        """
+        client = self._ensure_connected()
+        try:
+            book = client.get_order_book(token_id)
+            bids = book.bids if hasattr(book, "bids") else []
+            asks = book.asks if hasattr(book, "asks") else []
+
+            best_bid = float(bids[0].price) if bids else 0.0
+            best_ask = float(asks[0].price) if asks else 0.0
+
+            # Sum sizes across top 5 levels
+            bid_depth = sum(float(b.size) for b in bids[:5])
+            ask_depth = sum(float(a.size) for a in asks[:5])
+
+            # Midpoint as last trade price proxy
+            last_trade_price = (best_bid + best_ask) / 2 if (best_bid and best_ask) else best_bid or best_ask
+
+            return {
+                "best_bid": best_bid,
+                "best_ask": best_ask,
+                "bid_depth": bid_depth,
+                "ask_depth": ask_depth,
+                "last_trade_price": last_trade_price,
+            }
+        except Exception as e:
+            logger.error("Failed to fetch order book: %s", e)
+            return None
+
     def get_prices_history(
         self,
         token_id: str,

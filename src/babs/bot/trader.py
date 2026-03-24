@@ -10,6 +10,7 @@ from babs.bot.order_manager import OrderManager
 from babs.bot.position_tracker import PositionTracker
 from babs.bot.risk_manager import RiskManager
 from babs.config.settings import Settings, DEFAULT_SETTINGS
+from babs.data.candle_builder import CandleBuilder, Sample, parse_timeframe_seconds
 from babs.data.polymarket_client import PolymarketClient
 from babs.strategies.base_strategy import BaseStrategy, Position, Signal
 
@@ -41,10 +42,12 @@ class Trader:
         )
 
         self._running = False
+        self._candle_builder: Optional[CandleBuilder] = None
 
-    def _fetch_latest_data(self) -> Optional[pd.DataFrame]:
-        """Fetch the latest OHLCV data for the token from Polymarket."""
-        logger.debug("Fetching latest data for token %s", self.token_id[:16])
+    def _init_candle_builder(self) -> CandleBuilder:
+        """Create and seed the candle builder from prices-history."""
+        interval = parse_timeframe_seconds(self.settings.timeframe)
+        builder = CandleBuilder(interval_seconds=interval)
 
         fidelity = self.strategy.required_history() + 10
         history = self.client.get_prices_history(
@@ -52,31 +55,53 @@ class Trader:
             interval=self.settings.timeframe,
             fidelity=fidelity,
         )
-        if not history:
-            return None
+        if history:
+            builder.seed_from_history(history)
 
-        rows = []
-        for point in history:
-            ts = point.get("t")
-            price = point.get("p")
-            if ts is None or price is None:
-                continue
-            price = float(price)
-            rows.append(
-                {
-                    "timestamp": pd.to_datetime(ts, unit="s", utc=True),
-                    "open": price,
-                    "high": price,
-                    "low": price,
-                    "close": price,
-                    "volume": 0.0,
-                }
+        return builder
+
+    def _fetch_latest_data(self) -> Optional[pd.DataFrame]:
+        """Fetch the latest OHLCV data for the token from Polymarket.
+
+        Uses the candle builder to accumulate real OHLCV candles from order
+        book polling, falling back to flat candles from prices-history.
+        """
+        logger.debug("Fetching latest data for token %s", self.token_id[:16])
+
+        # Lazy-init candle builder on first call
+        if self._candle_builder is None:
+            self._candle_builder = self._init_candle_builder()
+
+        # Try order book for a rich sample
+        book = self.client.get_order_book(self.token_id)
+        if book is not None:
+            sample = Sample(
+                timestamp=time.time(),
+                price=book["last_trade_price"],
+                best_bid=book["best_bid"],
+                best_ask=book["best_ask"],
+                bid_depth=book["bid_depth"],
+                ask_depth=book["ask_depth"],
             )
+            self._candle_builder.add_sample(sample)
+        else:
+            # Fallback: use prices-history for a degraded flat sample
+            history = self.client.get_prices_history(
+                token_id=self.token_id,
+                interval=self.settings.timeframe,
+                fidelity=1,
+            )
+            if history:
+                point = history[-1]
+                ts = point.get("t")
+                price = point.get("p")
+                if ts is not None and price is not None:
+                    sample = Sample(timestamp=float(ts), price=float(price))
+                    self._candle_builder.add_sample(sample)
 
-        if not rows:
+        df = self._candle_builder.get_dataframe(include_current=True)
+        if df.empty:
             return None
-
-        df = pd.DataFrame(rows).set_index("timestamp").sort_index()
         return df
 
     def _current_price(self, data: pd.DataFrame) -> float:
