@@ -6,7 +6,7 @@ from typing import List, Optional
 
 import pandas as pd
 
-from strategies.base_strategy import BaseStrategy, Position, Signal
+from babs.strategies.base_strategy import BaseStrategy, Position, Signal
 
 logger = logging.getLogger(__name__)
 

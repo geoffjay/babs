@@ -6,7 +6,7 @@ from typing import List
 
 import numpy as np
 
-from backtesting.engine import BacktestResult, Trade
+from babs.backtesting.engine import BacktestResult, Trade
 
 logger = logging.getLogger(__name__)
 

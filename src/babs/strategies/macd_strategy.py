@@ -5,8 +5,8 @@ import logging
 import pandas as pd
 import ta
 
-from config.settings import DEFAULT_SETTINGS
-from strategies.base_strategy import BaseStrategy, Position, Signal
+from babs.config.settings import DEFAULT_SETTINGS
+from babs.strategies.base_strategy import BaseStrategy, Position, Signal
 
 logger = logging.getLogger(__name__)
 

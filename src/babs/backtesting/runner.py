@@ -7,9 +7,9 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from backtesting.engine import BacktestEngine, BacktestResult
-from backtesting.metrics import PerformanceMetrics, calculate_metrics, print_metrics
-from strategies.base_strategy import BaseStrategy
+from babs.backtesting.engine import BacktestEngine, BacktestResult
+from babs.backtesting.metrics import PerformanceMetrics, calculate_metrics, print_metrics
+from babs.strategies.base_strategy import BaseStrategy
 
 logger = logging.getLogger(__name__)
 

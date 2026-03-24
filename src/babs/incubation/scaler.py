@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from typing import List
 
-from bot.position_tracker import ClosedTrade
+from babs.bot.position_tracker import ClosedTrade
 
 logger = logging.getLogger(__name__)
 

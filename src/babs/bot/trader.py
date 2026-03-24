@@ -6,12 +6,12 @@ from typing import Optional
 
 import pandas as pd
 
-from bot.order_manager import OrderManager
-from bot.position_tracker import PositionTracker
-from bot.risk_manager import RiskManager
-from config.settings import Settings, DEFAULT_SETTINGS
-from data.polymarket_client import PolymarketClient
-from strategies.base_strategy import BaseStrategy, Position, Signal
+from babs.bot.order_manager import OrderManager
+from babs.bot.position_tracker import PositionTracker
+from babs.bot.risk_manager import RiskManager
+from babs.config.settings import Settings, DEFAULT_SETTINGS
+from babs.data.polymarket_client import PolymarketClient
+from babs.strategies.base_strategy import BaseStrategy, Position, Signal
 
 logger = logging.getLogger(__name__)
 

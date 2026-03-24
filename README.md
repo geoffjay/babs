@@ -29,10 +29,10 @@ Start with $1. Observe for 2-4 weeks. Scale slowly: **$1 → $5 → $10 → $50 
 
 ## Quick Start
 
-### 1. Install dependencies
+### 1. Install
 
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 ### 2. Configure your wallet
@@ -59,7 +59,7 @@ Browse [Polymarket](https://polymarket.com/) and find an active market. You'll n
 ### 4. Run a backtest
 
 ```bash
-python deploy/run_backtest.py \
+uv run babs backtest \
   --strategy macd \
   --symbol BTC/USDT \
   --timeframe 5m \
@@ -98,7 +98,7 @@ If the strategy doesn't pass — move on. Don't get attached to ideas.
 Start with **$1 size** — this is incubation, not production:
 
 ```bash
-python deploy/run_bot.py \
+uv run babs bot \
   --strategy macd \
   --token-id YOUR_TOKEN_ID \
   --size 1 \
@@ -120,7 +120,7 @@ Check every few hours: any errors? Are orders filling? Does P&L match backtest e
 ### 6. Monitor
 
 ```bash
-python deploy/run_monitor.py --interval 30
+uv run babs monitor --interval 30
 ```
 
 ---
@@ -136,7 +136,7 @@ Best for: **trending moves within 5-minute windows.**
 - Historical benchmark on Polymarket 5m markets: ~60% win rate
 
 ```bash
-python deploy/run_bot.py --strategy macd --token-id TOKEN --size 1
+uv run babs bot --strategy macd --token-id TOKEN --size 1
 ```
 
 ### RSI Mean Reversion (RSI 14)
@@ -148,7 +148,7 @@ Best for: **pullbacks after sharp moves.**
 - Historical benchmark: ~59% win rate
 
 ```bash
-python deploy/run_bot.py --strategy rsi --token-id TOKEN --size 1
+uv run babs bot --strategy rsi --token-id TOKEN --size 1
 ```
 
 ### CVD (Cumulative Volume Delta)
@@ -160,7 +160,7 @@ Best for: **identifying reversal points.**
 - Historical benchmark: ~63% win rate
 
 ```bash
-python deploy/run_bot.py --strategy cvd --token-id TOKEN --size 1
+uv run babs bot --strategy cvd --token-id TOKEN --size 1
 ```
 
 ---
@@ -187,16 +187,16 @@ Then reference them by name:
 
 ```bash
 # Terminal 1 — MACD bot
-python deploy/run_bot.py --strategy macd --token-id TOKEN --account primary
+uv run babs bot --strategy macd --token-id TOKEN --account primary
 
 # Terminal 2 — RSI bot
-python deploy/run_bot.py --strategy rsi --token-id TOKEN --account account_2
+uv run babs bot --strategy rsi --token-id TOKEN --account account_2
 
 # Terminal 3 — CVD bot
-python deploy/run_bot.py --strategy cvd --token-id TOKEN --account account_3
+uv run babs bot --strategy cvd --token-id TOKEN --account account_3
 
 # Terminal 4 — monitoring
-python deploy/run_monitor.py
+uv run babs monitor
 ```
 
 ---
@@ -214,11 +214,11 @@ The bot enforces hard risk limits that **cannot be overridden by strategy signal
 | Max daily loss | $50 | Stop trading for the day after this loss |
 | Max position size | $100 | Per-position notional cap |
 
-These defaults are in `config/settings.py` and can be adjusted.
+These defaults are in `src/babs/config/settings.py` and can be adjusted.
 
 ### Incubation Scaling
 
-The position scaler in `incubation/scaler.py` adjusts size automatically based on recent performance:
+The position scaler in `src/babs/incubation/scaler.py` adjusts size automatically based on recent performance:
 - **Scale up (1.25x):** Win rate > 60% AND profit factor > 1.5 over last 20 trades
 - **Scale down (0.75x):** Win rate < 40% OR profit factor < 0.8
 - **Bounds:** $0.50 minimum, $10 maximum (during incubation)
@@ -228,49 +228,47 @@ The position scaler in `incubation/scaler.py` adjusts size automatically based o
 ## Project Structure
 
 ```
+src/babs/
+├── cli.py                       # Click CLI entry point
 ├── config/
-│   ├── settings.py            # All tunable parameters
-│   └── accounts.py            # Multi-account wallet loader
+│   ├── settings.py              # All tunable parameters
+│   └── accounts.py              # Multi-account wallet loader
 ├── data/
-│   ├── polymarket_client.py   # Polymarket CLOB API (limit orders only)
-│   ├── downloader.py          # OHLCV data via ccxt
-│   └── storage.py             # CSV/SQLite persistence
+│   ├── polymarket_client.py     # Polymarket CLOB API (limit orders only)
+│   ├── downloader.py            # OHLCV data via ccxt
+│   └── storage.py               # CSV/SQLite persistence
 ├── strategies/
-│   ├── base_strategy.py       # Abstract base class + Signal enum
-│   ├── macd_strategy.py       # MACD Histogram (3/15/3)
-│   ├── rsi_mean_reversion.py  # RSI Mean Reversion + VWAP
-│   └── cvd_strategy.py        # Cumulative Volume Delta
+│   ├── base_strategy.py         # Abstract base class + Signal enum
+│   ├── macd_strategy.py         # MACD Histogram (3/15/3)
+│   ├── rsi_mean_reversion.py    # RSI Mean Reversion + VWAP
+│   └── cvd_strategy.py          # Cumulative Volume Delta
 ├── backtesting/
-│   ├── engine.py              # Backtest simulation engine
-│   ├── metrics.py             # Win rate, Sharpe, profit factor, drawdown
-│   └── runner.py              # Parallel backtest execution
+│   ├── engine.py                # Backtest simulation engine
+│   ├── metrics.py               # Win rate, Sharpe, profit factor, drawdown
+│   └── runner.py                # Parallel backtest execution
 ├── bot/
-│   ├── trader.py              # Main trading loop
-│   ├── risk_manager.py        # Hard risk limits
-│   ├── order_manager.py       # Cancel-before-place, dedup
-│   └── position_tracker.py    # Position and P&L tracking
-├── incubation/
-│   ├── monitor.py             # Live bot monitoring dashboard
-│   ├── scaler.py              # Adaptive position sizing
-│   └── logger.py              # CSV trade log
-├── deploy/
-│   ├── run_bot.py             # Launch a trading bot
-│   ├── run_backtest.py        # Run a backtest
-│   └── run_monitor.py         # Launch monitoring dashboard
-└── tests/
-    ├── test_strategies.py
-    ├── test_backtesting.py
-    └── test_risk_manager.py
+│   ├── trader.py                # Main trading loop
+│   ├── risk_manager.py          # Hard risk limits
+│   ├── order_manager.py         # Cancel-before-place, dedup
+│   └── position_tracker.py      # Position and P&L tracking
+└── incubation/
+    ├── monitor.py               # Live bot monitoring dashboard
+    ├── scaler.py                # Adaptive position sizing
+    └── logger.py                # CSV trade log
+tests/
+├── test_strategies.py
+├── test_backtesting.py
+└── test_risk_manager.py
 ```
 
 ---
 
 ## Adding a New Strategy
 
-1. Create a new file in `strategies/` that subclasses `BaseStrategy`:
+1. Create a new file in `src/babs/strategies/` that subclasses `BaseStrategy`:
 
 ```python
-from strategies.base_strategy import BaseStrategy, Position, Signal
+from babs.strategies.base_strategy import BaseStrategy, Position, Signal
 
 class MyStrategy(BaseStrategy):
     name = "mystrategy"
@@ -284,10 +282,12 @@ class MyStrategy(BaseStrategy):
         ...
 ```
 
-2. Register it in `deploy/run_bot.py` and `deploy/run_backtest.py`:
+2. Register it in `src/babs/cli.py` by adding it to `_get_strategy()`:
 
 ```python
-STRATEGY_MAP["mystrategy"] = MyStrategy
+from babs.strategies.my_strategy import MyStrategy
+
+strategy_map["mystrategy"] = MyStrategy
 ```
 
 3. Backtest it. If it passes the benchmarks (>55% win rate, >1.5 profit factor, <20% drawdown, 100+ trades), incubate it.

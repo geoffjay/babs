@@ -1,5 +1,1 @@
-def main() -> None:
-    print("Hello from babs!")
-
-if __name__ == "__main__":
-    main()
+"""BABS — Polymarket Algorithmic Trading Bot."""

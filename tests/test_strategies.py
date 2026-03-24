@@ -5,10 +5,10 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from strategies.base_strategy import Signal, Position
-from strategies.macd_strategy import MACDStrategy
-from strategies.rsi_mean_reversion import RSIMeanReversionStrategy
-from strategies.cvd_strategy import CVDStrategy
+from babs.strategies.base_strategy import Signal, Position
+from babs.strategies.macd_strategy import MACDStrategy
+from babs.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
+from babs.strategies.cvd_strategy import CVDStrategy
 
 
 def _make_ohlcv(prices: list, volumes: list = None) -> pd.DataFrame:

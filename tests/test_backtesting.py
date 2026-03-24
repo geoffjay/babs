@@ -4,10 +4,10 @@ import unittest
 
 import pandas as pd
 
-from backtesting.engine import BacktestEngine, BacktestResult, Trade
-from backtesting.metrics import calculate_metrics, _compute_max_drawdown, _compute_sharpe
-from strategies.macd_strategy import MACDStrategy
-from strategies.rsi_mean_reversion import RSIMeanReversionStrategy
+from babs.backtesting.engine import BacktestEngine, BacktestResult, Trade
+from babs.backtesting.metrics import calculate_metrics, _compute_max_drawdown, _compute_sharpe
+from babs.strategies.macd_strategy import MACDStrategy
+from babs.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
 
 
 def _make_trending_data(n: int = 200, start_price: float = 0.50) -> pd.DataFrame:

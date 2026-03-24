@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import List
 
-from config.settings import RiskParams, DEFAULT_SETTINGS
-from strategies.base_strategy import Position
+from babs.config.settings import RiskParams, DEFAULT_SETTINGS
+from babs.strategies.base_strategy import Position
 
 logger = logging.getLogger(__name__)
 

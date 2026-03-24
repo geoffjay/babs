@@ -2,9 +2,9 @@
 
 import unittest
 
-from bot.risk_manager import RiskManager
-from config.settings import RiskParams
-from strategies.base_strategy import Position
+from babs.bot.risk_manager import RiskManager
+from babs.config.settings import RiskParams
+from babs.strategies.base_strategy import Position
 
 
 class TestRiskManager(unittest.TestCase):

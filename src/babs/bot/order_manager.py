@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, Optional, Set
 
-from data.polymarket_client import PolymarketClient, OrderResult
+from babs.data.polymarket_client import PolymarketClient, OrderResult
 
 logger = logging.getLogger(__name__)
 
