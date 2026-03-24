@@ -3,9 +3,11 @@
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+PositionKey = Tuple[str, str]  # (token_id, account)
 
 
 @dataclass
@@ -50,9 +52,13 @@ class PositionTracker:
     """Track open positions and realized/unrealized P&L."""
 
     def __init__(self):
-        self._open_positions: Dict[str, TrackedPosition] = {}
+        self._open_positions: Dict[PositionKey, TrackedPosition] = {}
         self._closed_trades: List[ClosedTrade] = []
         self._total_realized_pnl: float = 0.0
+
+    @staticmethod
+    def _key(token_id: str, account: str = "") -> PositionKey:
+        return (token_id, account)
 
     def open_position(
         self,
@@ -72,18 +78,24 @@ class PositionTracker:
             current_price=entry_price,
             account=account,
         )
-        self._open_positions[token_id] = pos
+        self._open_positions[self._key(token_id, account)] = pos
         logger.info(
-            "Position opened: %s %s @ %.4f x %.2f",
-            side, token_id[:16], entry_price, size,
+            "Position opened: %s %s @ %.4f x %.2f (account=%s)",
+            side, token_id[:16], entry_price, size, account,
         )
         return pos
 
-    def close_position(self, token_id: str, exit_price: float) -> Optional[ClosedTrade]:
+    def close_position(
+        self, token_id: str, exit_price: float, account: str = "",
+    ) -> Optional[ClosedTrade]:
         """Close an open position and record the realized P&L."""
-        pos = self._open_positions.pop(token_id, None)
+        key = self._key(token_id, account)
+        pos = self._open_positions.pop(key, None)
         if pos is None:
-            logger.warning("No open position found for token %s", token_id[:16])
+            logger.warning(
+                "No open position found for token %s account=%s",
+                token_id[:16], account,
+            )
             return None
 
         if pos.side == "BUY":
@@ -106,27 +118,28 @@ class PositionTracker:
         self._total_realized_pnl += pnl
 
         logger.info(
-            "Position closed: %s %s @ %.4f -> %.4f, PnL=%.4f",
-            pos.side, token_id[:16], pos.entry_price, exit_price, pnl,
+            "Position closed: %s %s @ %.4f -> %.4f, PnL=%.4f (account=%s)",
+            pos.side, token_id[:16], pos.entry_price, exit_price, pnl, account,
         )
         return trade
 
-    def update_price(self, token_id: str, price: float) -> None:
+    def update_price(self, token_id: str, price: float, account: str = "") -> None:
         """Update the current market price for an open position."""
-        if token_id in self._open_positions:
-            self._open_positions[token_id].current_price = price
+        key = self._key(token_id, account)
+        if key in self._open_positions:
+            self._open_positions[key].current_price = price
 
     def get_open_positions(self) -> List[TrackedPosition]:
         """Return all open positions."""
         return list(self._open_positions.values())
 
-    def get_position(self, token_id: str) -> Optional[TrackedPosition]:
-        """Get a specific open position by token ID."""
-        return self._open_positions.get(token_id)
+    def get_position(self, token_id: str, account: str = "") -> Optional[TrackedPosition]:
+        """Get a specific open position by token ID and account."""
+        return self._open_positions.get(self._key(token_id, account))
 
-    def has_position(self, token_id: str) -> bool:
-        """Check if there's an open position for the given token."""
-        return token_id in self._open_positions
+    def has_position(self, token_id: str, account: str = "") -> bool:
+        """Check if there's an open position for the given token and account."""
+        return self._key(token_id, account) in self._open_positions
 
     @property
     def total_unrealized_pnl(self) -> float:

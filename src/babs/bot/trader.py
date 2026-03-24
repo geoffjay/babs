@@ -110,7 +110,7 @@ class Trader:
 
     def _to_strategy_position(self) -> Optional[Position]:
         """Convert a TrackedPosition to the strategy's Position type."""
-        tracked = self.position_tracker.get_position(self.token_id)
+        tracked = self.position_tracker.get_position(self.token_id, self.account_name)
         if tracked is None:
             return None
         return Position(
@@ -131,7 +131,7 @@ class Trader:
             return
 
         price = self._current_price(data)
-        self.position_tracker.update_price(self.token_id, price)
+        self.position_tracker.update_price(self.token_id, price, self.account_name)
 
         # Update equity for risk tracking
         equity = self.risk_manager.initial_capital + self.position_tracker.total_pnl
@@ -155,14 +155,16 @@ class Trader:
                     size=strategy_pos.size,
                 )
                 if order_id:
-                    trade = self.position_tracker.close_position(self.token_id, price)
+                    trade = self.position_tracker.close_position(
+                        self.token_id, price, self.account_name,
+                    )
                     if trade:
                         self.risk_manager.record_trade_pnl(trade.pnl)
                         logger.info("Trade closed: PnL=%.4f", trade.pnl)
                 return
 
         # --- Entry check ---
-        if not self.position_tracker.has_position(self.token_id):
+        if not self.position_tracker.has_position(self.token_id, self.account_name):
             if not self.risk_manager.can_trade(open_positions):
                 logger.debug("Risk manager blocked new trade")
                 return
