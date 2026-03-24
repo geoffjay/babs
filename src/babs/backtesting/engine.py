@@ -91,7 +91,7 @@ class BacktestEngine:
                     pnl_pct = pnl / (position.entry_price * position.size) if position.entry_price > 0 else 0
 
                     trade = Trade(
-                        entry_time=position.token_id,  # Repurposed as entry timestamp
+                        entry_time=position.entry_time,
                         exit_time=current_time,
                         side=position.side,
                         entry_price=position.entry_price,
@@ -125,11 +125,12 @@ class BacktestEngine:
 
                     if size > 0:
                         position = Position(
-                            token_id=str(current_time),  # Store entry time
+                            token_id="backtest",
                             side=side,
                             entry_price=entry_price,
                             size=size,
                             current_price=current_price,
+                            entry_time=current_time,
                         )
                         logger.debug("Opened %s @ %.4f, size=%.4f", side, entry_price, size)
 
@@ -148,7 +149,7 @@ class BacktestEngine:
 
             pnl_pct = pnl / (position.entry_price * position.size) if position.entry_price > 0 else 0
             trade = Trade(
-                entry_time=position.token_id,
+                entry_time=position.entry_time,
                 exit_time=data.index[-1],
                 side=position.side,
                 entry_price=position.entry_price,

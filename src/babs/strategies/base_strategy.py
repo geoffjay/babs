@@ -1,7 +1,7 @@
 """Abstract base strategy class for all trading strategies."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
@@ -21,6 +21,7 @@ class Position:
     entry_price: float
     size: float
     current_price: float = 0.0
+    entry_time: Optional[pd.Timestamp] = field(default=None, repr=False)
 
     @property
     def unrealized_pnl(self) -> float:
