@@ -36,7 +36,7 @@ OUTPUT_DIR = Path(__file__).resolve().parent
 OUTPUT_CSV = OUTPUT_DIR / "sweep_results.csv"
 
 SYMBOLS = ["BTC/USDT", "ETH/USDT"]
-TIMEFRAMES = ["15m", "1h", "4h"]
+TIMEFRAMES = ["1h", "4h"]  # skip 15m — too slow to sweep, already proven bad
 START = datetime(2025, 1, 1)
 END = datetime(2025, 3, 1)
 
@@ -97,10 +97,10 @@ def download_data(
 # ---------------------------------------------------------------------------
 
 def build_macd_configs() -> list[dict]:
-    """Build MACD parameter grid."""
+    """Build MACD parameter grid — focused on slower, more viable params."""
     configs = []
     for fast, slow, signal, sl, tp in itertools.product(
-        [3, 5, 8, 12], [15, 21, 26, 34], [3, 5, 9], STOP_LOSSES, TAKE_PROFITS,
+        [8, 12], [21, 26, 34], [5, 9], STOP_LOSSES, TAKE_PROFITS,
     ):
         if fast >= slow:
             continue
@@ -116,7 +116,7 @@ def build_rsi_configs() -> list[dict]:
     """Build RSI parameter grid."""
     configs = []
     for period, oversold, overbought, sl, tp in itertools.product(
-        [7, 14, 21], [20, 25, 30], [70, 75, 80], STOP_LOSSES, TAKE_PROFITS,
+        [7, 14, 21], [20, 30], [70, 80], STOP_LOSSES, TAKE_PROFITS,
     ):
         configs.append({
             "strategy_name": "RSI",
@@ -170,6 +170,9 @@ def make_strategy(cfg: dict):
 def run_sweep(data: dict[tuple[str, str], pd.DataFrame]) -> pd.DataFrame:
     """Execute the full parameter sweep and return results as a DataFrame."""
     all_configs = build_macd_configs() + build_rsi_configs() + build_cvd_configs()
+
+    # Sort datasets by row count (ascending) so fast timeframes finish first
+    sorted_keys = sorted(data.keys(), key=lambda k: len(data[k]))
     total_combos = len(all_configs) * len(data)
     logger.info("Total configurations to test: %d strategies x %d datasets = %d runs",
                 len(all_configs), len(data), total_combos)
@@ -178,11 +181,15 @@ def run_sweep(data: dict[tuple[str, str], pd.DataFrame]) -> pd.DataFrame:
     completed = 0
     t0 = time.time()
 
-    for (symbol, tf), df in data.items():
+    for (symbol, tf) in sorted_keys:
+        df = data[(symbol, tf)]
+        logger.info("Starting dataset: %s %s (%d rows, %d configs)",
+                    symbol, tf, len(df), len(all_configs))
         periods_yr = PERIODS_PER_YEAR.get(tf, 252.0)
+        dataset_t0 = time.time()
         for cfg in all_configs:
             completed += 1
-            if completed % 200 == 0 or completed == 1:
+            if completed % 50 == 0 or completed == 1:
                 elapsed = time.time() - t0
                 rate = completed / elapsed if elapsed > 0 else 0
                 eta = (total_combos - completed) / rate if rate > 0 else 0
@@ -221,6 +228,12 @@ def run_sweep(data: dict[tuple[str, str], pd.DataFrame]) -> pd.DataFrame:
                     "Error running %s on %s/%s with %s: %s",
                     cfg["strategy_name"], symbol, tf, cfg["params"], exc,
                 )
+        dataset_elapsed = time.time() - dataset_t0
+        logger.info("Finished %s %s in %.1fs", symbol, tf, dataset_elapsed)
+        # Save partial results after each dataset
+        partial_df = pd.DataFrame(rows)
+        partial_df.to_csv(OUTPUT_CSV, index=False)
+        logger.info("Saved %d partial results to %s", len(rows), OUTPUT_CSV)
 
     elapsed = time.time() - t0
     logger.info("Sweep complete: %d results in %.1fs", len(rows), elapsed)
