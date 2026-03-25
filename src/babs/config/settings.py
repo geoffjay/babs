@@ -24,6 +24,19 @@ class CVDParams:
 
 
 @dataclass
+class MarketMakingParams:
+    base_spread: float = 0.02
+    volatility_lookback: int = 20
+    volatility_multiplier: float = 2.0
+    skew_factor: float = 0.5
+    max_inventory: float = 5.0
+    max_hold_bars: int = 10
+    inventory_stop_loss: float = 0.05
+    edge_buffer: float = 0.03
+    min_spread: float = 0.01
+
+
+@dataclass
 class RiskParams:
     stop_loss_pct: float = 0.05
     take_profit_pct: float = 0.10
@@ -48,6 +61,7 @@ class Settings:
     macd: MACDParams = field(default_factory=MACDParams)
     rsi: RSIParams = field(default_factory=RSIParams)
     cvd: CVDParams = field(default_factory=CVDParams)
+    mm: MarketMakingParams = field(default_factory=MarketMakingParams)
 
     # Risk management
     risk: RiskParams = field(default_factory=RiskParams)

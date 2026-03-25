@@ -41,11 +41,12 @@ class BacktestEngine:
         initial_capital: float = 1000.0,
         position_size: float = 1.0,
         slippage_pct: float = 0.001,
+        maker_mode: bool = False,
     ):
         self.strategy = strategy
         self.initial_capital = initial_capital
         self.position_size = position_size
-        self.slippage_pct = slippage_pct
+        self.slippage_pct = 0.0 if maker_mode else slippage_pct
 
     def run(self, data: pd.DataFrame) -> BacktestResult:
         """Run the backtest over the provided OHLCV data.

@@ -6,7 +6,7 @@ from datetime import datetime
 
 import click
 
-STRATEGY_CHOICES = ["macd", "rsi", "cvd"]
+STRATEGY_CHOICES = ["macd", "rsi", "cvd", "mm"]
 
 
 def _setup_logging(log_level: str) -> None:
@@ -21,11 +21,13 @@ def _get_strategy(name: str):
     from babs.strategies.macd_strategy import MACDStrategy
     from babs.strategies.rsi_mean_reversion import RSIMeanReversionStrategy
     from babs.strategies.cvd_strategy import CVDStrategy
+    from babs.strategies.market_making_strategy import MarketMakingStrategy
 
     strategy_map = {
         "macd": MACDStrategy,
         "rsi": RSIMeanReversionStrategy,
         "cvd": CVDStrategy,
+        "mm": MarketMakingStrategy,
     }
     return strategy_map[name]()
 
@@ -107,6 +109,7 @@ def backtest(
         strategy=strat,
         initial_capital=capital,
         position_size=size,
+        maker_mode=(strategy == "mm"),
     )
     result = engine.run(data)
 
